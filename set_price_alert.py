@@ -102,15 +102,18 @@ def check_watchlist() -> None:
         except Exception as e:
             print(f"[error] {symbol}: {e}")
 
+    tz = pytz.timezone("Asia/Bangkok")
+    now_str = datetime.now(tz).strftime("%d/%m/%Y %H:%M")
+
     if alerts:
-        tz = pytz.timezone("Asia/Bangkok")
-        now_str = datetime.now(tz).strftime("%d/%m/%Y %H:%M")
         header = f"🔔 <b>แจ้งเตือนราคาหุ้น SET</b> ({now_str})\n\n"
         message = header + "\n\n".join(alerts)
         send_telegram_message(message)
         print("ส่งแจ้งเตือนแล้ว")
     else:
-        print("ไม่มีหุ้นที่เปลี่ยนแปลงเกินเกณฑ์รอบนี้")
+        message = f"ℹ️ ({now_str}) ยังไม่มีหุ้นน่าสนใจ"
+        send_telegram_message(message)
+        print("ไม่มีหุ้นที่เปลี่ยนแปลงเกินเกณฑ์รอบนี้ — ส่งข้อความแจ้งแล้ว")
 
 
 if __name__ == "__main__":
