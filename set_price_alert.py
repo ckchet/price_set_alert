@@ -93,6 +93,54 @@ def send_telegram_message(text: str) -> None:
         print(f"[error] ส่ง Telegram ไม่สำเร็จ: {resp.status_code} {resp.text}")
 
 
+def fetch_price_changes(symbols: list[str]) -> dict:
+    """
+    ดึงราคาปิดล่าสุด 2 วันทำการของหุ้นทุกตัวพร้อมกัน (batch) แล้วคำนวณ % เปลี่ยนแปลง
+    ใช้ history() แทน fast_info เพราะ fast_info บางครั้งมีข้อมูลค้าง/ไม่อัปเดตสำหรับหุ้นไทยบางตัว
+    คืนค่า dict: {symbol: (current_price, prev_close, pct_change)}
+    """
+    results = {}
+    if not symbols:
+        return results
+
+    data = yf.download(
+        tickers=symbols,
+        period="5d",
+        interval="1d",
+        group_by="ticker",
+        progress=False,
+        threads=True,
+        auto_adjust=False,
+    )
+
+    for symbol in symbols:
+        try:
+            # เมื่อมีหลายหุ้น yfinance จะคืนเป็น multi-index column (symbol, field)
+            if len(symbols) == 1:
+                closes = data["Close"].dropna()
+            else:
+                closes = data[symbol]["Close"].dropna()
+
+            if len(closes) < 2:
+                print(f"[skip] {symbol}: ข้อมูลราคาย้อนหลังไม่พอ")
+                continue
+
+            current_price = float(closes.iloc[-1])
+            prev_close = float(closes.iloc[-2])
+
+            if prev_close == 0:
+                print(f"[skip] {symbol}: ราคาปิดก่อนหน้าเป็น 0")
+                continue
+
+            pct_change = (current_price - prev_close) / prev_close * 100
+            results[symbol] = (current_price, prev_close, pct_change)
+
+        except Exception as e:
+            print(f"[error] {symbol}: ดึงข้อมูลไม่ได้ ({e})")
+
+    return results
+
+
 def check_watchlist() -> None:
     print(f"ติดตามหุ้นทั้งหมด {len(WATCHLIST)} ตัว")
 
@@ -102,32 +150,19 @@ def check_watchlist() -> None:
 
     alerts = []
 
-    for symbol in WATCHLIST:
-        try:
-            ticker = yf.Ticker(symbol)
-            info = ticker.fast_info  # เร็วกว่า .info
-            current_price = info.get("last_price")
-            prev_close = info.get("previous_close")
+    price_changes = fetch_price_changes(WATCHLIST)
 
-            if current_price is None or prev_close is None or prev_close == 0:
-                print(f"[skip] {symbol}: ข้อมูลไม่ครบ")
-                continue
+    for symbol, (current_price, prev_close, pct_change) in price_changes.items():
+        print(f"{symbol}: {current_price:.2f} ({pct_change:+.2f}%)")
 
-            pct_change = (current_price - prev_close) / prev_close * 100
-
-            print(f"{symbol}: {current_price:.2f} ({pct_change:+.2f}%)")
-
-            if abs(pct_change) >= THRESHOLD_PERCENT:
-                direction = "📈 ขึ้น" if pct_change > 0 else "📉 ลง"
-                alerts.append(
-                    f"{direction} <b>{symbol}</b>\n"
-                    f"ราคาล่าสุด: {current_price:.2f} บาท\n"
-                    f"เปลี่ยนแปลง: {pct_change:+.2f}%\n"
-                    f"(ปิดก่อนหน้า: {prev_close:.2f})"
-                )
-
-        except Exception as e:
-            print(f"[error] {symbol}: {e}")
+        if abs(pct_change) >= THRESHOLD_PERCENT:
+            direction = "📈 ขึ้น" if pct_change > 0 else "📉 ลง"
+            alerts.append(
+                f"{direction} <b>{symbol}</b>\n"
+                f"ราคาล่าสุด: {current_price:.2f} บาท\n"
+                f"เปลี่ยนแปลง: {pct_change:+.2f}%\n"
+                f"(ปิดก่อนหน้า: {prev_close:.2f})"
+            )
 
     tz = pytz.timezone("Asia/Bangkok")
     now_str = datetime.now(tz).strftime("%d/%m/%Y %H:%M")
