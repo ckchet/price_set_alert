@@ -1,0 +1,28 @@
+name: SET Price Alert
+
+on:
+  schedule:
+    # รันทุก 30 นาที (เวลา UTC) — GitHub อาจดีเลย์ได้บ้างในช่วงคิวยาว
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}   # กดรันเองได้จากแท็บ Actions เพื่อทดสอบ
+
+jobs:
+  check-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run price check
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python set_price_alert.py
