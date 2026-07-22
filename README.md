@@ -44,21 +44,30 @@
 
 ## แก้ไขหุ้นที่ติดตาม
 
-เปิดไฟล์ `set_price_alert.py` แก้ไขลิสต์ `WATCHLIST` เช่น:
+รายชื่อหุ้นแยกเป็น 3 ไฟล์ (1 บรรทัดต่อ 1 ตัว ไม่ต้องเติม `.BK` ก็ได้ ระบบเติมให้อัตโนมัติ):
 
-```python
-WATCHLIST = [
-    "PTT.BK",
-    "CPALL.BK",
-    "AOT.BK",
-]
-```
+| ไฟล์ | ใช้สำหรับ |
+|---|---|
+| `watchlist_custom.txt` | หุ้นที่คุณสนใจเป็นการส่วนตัว แก้ไข/เพิ่มได้เลย |
+| `watchlist_set100.txt` | หุ้นกลุ่ม SET100 — มีลิสต์เริ่มต้นให้บางส่วน **แต่ไม่ใช่รายชื่อฉบับสมบูรณ์/ล่าสุด** เพราะไฟล์ทางการต้องล็อกอินโหลด และรายชื่อเปลี่ยนทุก 6 เดือน |
+| `watchlist_sethd.txt` | หุ้นกลุ่ม SETHD — ยังไม่ได้ใส่รายชื่อไว้ล่วงหน้า ต้องคัดลอกมาใส่เอง |
 
-ชื่อหุ้นต้องเติม `.BK` ต่อท้ายเสมอ (เช่น หุ้น PTT → `PTT.BK`)
+**วิธีเอารายชื่อ SET100 / SETHD ฉบับล่าสุดมาใส่:**
+
+1. ล็อกอิน (สมัครฟรี) ที่เว็บ SET แล้วโหลด PDF รอบล่าสุด:
+   - SET100: https://www.set.or.th/th/market/information/securities-list/constituents-list-set50-set100
+   - SETHD: https://www.set.or.th/th/market/information/securities-list/constituents-list-sethd
+2. หรือดูจากตารางที่ไม่ต้องล็อกอิน เช่น settrade.com:
+   https://www.settrade.com/th/equities/market-data/overview?category=Index&index=SET100
+3. คัดลอกชื่อย่อหุ้น (symbol) มาวางในไฟล์ `.txt` ที่เกี่ยวข้อง บรรทัดละ 1 ตัว
+
+หุ้นที่ซ้ำกันระหว่าง 3 ไฟล์ (เช่นหุ้นที่อยู่ทั้ง watchlist ส่วนตัว และ SET100) จะถูกตัดออกให้อัตโนมัติ ไม่ซ้ำซ้อน
+
+> อย่าลืม: ทุกครั้งที่แก้ไขไฟล์ `.txt` ต้อง commit + push ขึ้น GitHub ด้วย ไม่งั้น workflow จะยังใช้รายชื่อเดิม
 
 ## แก้ไขเกณฑ์ % แจ้งเตือน
 
-แก้ค่า `THRESHOLD_PERCENT = 3.0` ในไฟล์เดียวกัน
+แก้ค่า `THRESHOLD_PERCENT = 2.0` ในไฟล์ `set_price_alert.py` (ตอนนี้ตั้งไว้ที่ 2% แล้ว)
 
 ## รันบนเครื่องตัวเองแทน (ทางเลือก)
 

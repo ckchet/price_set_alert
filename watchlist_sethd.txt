@@ -1,0 +1,33 @@
+# หุ้นกลุ่ม SETHD - ดึงจากไฟล์ที่ผู้ใช้อัปโหลด (ข้อมูล ณ ปัจจุบัน)
+# 1 บรรทัดต่อ 1 ตัว, ไม่ต้องเติม .BK ระบบเติมให้เอง
+
+AEONTS
+AMATA
+AP
+BA
+BAM
+BBL
+HMPRO
+JMT
+KBANK
+KKP
+KTB
+KTC
+LH
+M
+MEGA
+PRM
+PTT
+PTTEP
+QH
+RATCH
+RCL
+SCB
+SIRI
+SPALI
+TCAP
+TISCO
+TLI
+TOA
+TTB
+WHA
