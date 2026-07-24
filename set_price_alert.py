@@ -25,10 +25,14 @@ from pathlib import Path
 import pytz
 import yfinance as yf
 import requests
+from dotenv import load_dotenv
 
 # ========== ตั้งค่า ==========
 
 BASE_DIR = Path(__file__).resolve().parent
+
+# โหลดค่าจากไฟล์ .env ถ้ามี (สะดวกเวลารันผ่าน cron ซึ่งไม่โหลด shell profile ให้)
+load_dotenv(BASE_DIR / ".env")
 
 WATCHLIST_FILES = [
     BASE_DIR / "watchlist_custom.txt",
@@ -73,8 +77,8 @@ def is_market_hours() -> bool:
     now = datetime.now(tz)
     if now.weekday() >= 5:  # 5=เสาร์, 6=อาทิตย์
         return False
-    market_open = now.replace(hour=10, minute=0, second=0, microsecond=0)
-    market_close = now.replace(hour=16, minute=30, second=0, microsecond=0)
+    market_open = now.replace(hour=10, minute=20, second=0, microsecond=0)
+    market_close = now.replace(hour=17, minute=30, second=0, microsecond=0)
     return market_open <= now <= market_close
 
 
@@ -144,7 +148,11 @@ def fetch_price_changes(symbols: list[str]) -> dict:
 def check_watchlist() -> None:
     print(f"ติดตามหุ้นทั้งหมด {len(WATCHLIST)} ตัว")
 
-    if ONLY_DURING_MARKET_HOURS and not is_market_hours():
+    force_run = os.environ.get("FORCE_RUN", "false").strip().lower() == "true"
+
+    if force_run:
+        print("[force_run] ข้ามการเช็คเวลาตลาด เช็คราคาทันที")
+    elif ONLY_DURING_MARKET_HOURS and not is_market_hours():
         print("นอกเวลาทำการตลาด ข้ามการเช็ครอบนี้")
         return
 
