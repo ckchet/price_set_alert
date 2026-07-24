@@ -1,12 +1,16 @@
 name: SET Price Alert
 
 on:
-  schedule:
-    # รันทุก 30 นาที (เวลา UTC) แต่เยื้องออกจากนาทีที่ 0/30 พอดี
-    # เพราะ GitHub ระบุว่าช่วงต้นชั่วโมง/ครึ่งชั่วโมงมีคิว scheduled workflow
-    # หนาแน่นที่สุด ทำให้เสี่ยงถูกดีเลย์หรือข้ามรอบสูงกว่าปกติ
-    - cron: "7,37 * * * *"
-  workflow_dispatch: {}   # กดรันเองได้จากแท็บ Actions เพื่อทดสอบ
+  # ไม่ใช้ schedule ของ GitHub แล้ว เพราะให้ cron-job.org เป็นตัวสั่งรันแทน
+  # (แม่นยำกว่า ไม่ต้องเข้าคิว scheduled queue ของ GitHub ที่เคยดีเลย์/ข้ามรอบ)
+  # เหลือแค่ workflow_dispatch ไว้ให้ cron-job.org เรียกผ่าน API
+  # และไว้กดรันเองด้วยมือเพื่อทดสอบได้จากแท็บ Actions
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: "ข้ามการเช็คเวลาตลาด แล้วเช็คราคา+ส่งแจ้งเตือนทันที (ใช้ตอนกดรันเองเพื่อทดสอบ)"
+        type: boolean
+        default: false
 
 jobs:
   check-prices:
@@ -27,4 +31,5 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FORCE_RUN: ${{ inputs.force_run }}
         run: python set_price_alert.py
