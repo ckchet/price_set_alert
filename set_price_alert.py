@@ -156,7 +156,8 @@ def check_watchlist() -> None:
         print("นอกเวลาทำการตลาด ข้ามการเช็ครอบนี้")
         return
 
-    alerts = []
+    gainers = []  # หุ้นที่ราคาขึ้น (pct_change เป็นบวก)
+    losers = []   # หุ้นที่ราคาลง (pct_change เป็นลบ)
 
     price_changes = fetch_price_changes(WATCHLIST)
 
@@ -164,20 +165,42 @@ def check_watchlist() -> None:
         print(f"{symbol}: {current_price:.2f} ({pct_change:+.2f}%)")
 
         if abs(pct_change) >= THRESHOLD_PERCENT:
-            direction = "📈 ขึ้น" if pct_change > 0 else "📉 ลง"
-            alerts.append(
-                f"{direction} <b>{symbol}</b>\n"
-                f"ราคาล่าสุด: {current_price:.2f} บาท\n"
-                f"เปลี่ยนแปลง: {pct_change:+.2f}%\n"
-                f"(ปิดก่อนหน้า: {prev_close:.2f})"
-            )
+            entry = (symbol, current_price, prev_close, pct_change)
+            if pct_change > 0:
+                gainers.append(entry)
+            else:
+                losers.append(entry)
+
+    # เรียงฝั่งบวก: มากที่สุด -> น้อยที่สุด (มาก% ก่อน)
+    gainers.sort(key=lambda x: x[3], reverse=True)
+    # เรียงฝั่งลบ: ลบมากที่สุด -> ลบน้อยที่สุด (ติดลบเยอะสุดก่อน)
+    losers.sort(key=lambda x: x[3])
+
+    def format_entry(entry) -> str:
+        symbol, current_price, prev_close, pct_change = entry
+        direction = "📈 ขึ้น" if pct_change > 0 else "📉 ลง"
+        return (
+            f"{direction} <b>{symbol}</b>\n"
+            f"ราคาล่าสุด: {current_price:.2f} บาท\n"
+            f"เปลี่ยนแปลง: {pct_change:+.2f}%\n"
+            f"(ปิดก่อนหน้า: {prev_close:.2f})"
+        )
 
     tz = pytz.timezone("Asia/Bangkok")
     now_str = datetime.now(tz).strftime("%d/%m/%Y %H:%M")
 
-    if alerts:
+    if gainers or losers:
+        sections = []
+        if gainers:
+            sections.append(
+                "🟢 <b>ราคาขึ้น</b>\n\n" + "\n\n".join(format_entry(e) for e in gainers)
+            )
+        if losers:
+            sections.append(
+                "🔴 <b>ราคาลง</b>\n\n" + "\n\n".join(format_entry(e) for e in losers)
+            )
         header = f"🔔 <b>แจ้งเตือนราคาหุ้น SET</b> ({now_str})\n\n"
-        message = header + "\n\n".join(alerts)
+        message = header + "\n\n".join(sections)
         send_telegram_message(message)
         print("ส่งแจ้งเตือนแล้ว")
     else:
