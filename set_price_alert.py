@@ -68,8 +68,31 @@ THRESHOLD_PERCENT = 2.0
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
-# เช็คเฉพาะช่วงเวลาทำการของตลาดหุ้นไทย (จันทร์-ศุกร์ 10:00-16:30) หรือไม่
+# เช็คเฉพาะช่วงเวลาทำการของตลาดหุ้นไทย (จันทร์-ศุกร์ 10:20-17:30) หรือไม่
 ONLY_DURING_MARKET_HOURS = True
+
+# ไฟล์รายชื่อวันหยุดพิเศษ (นอกเหนือจากเสาร์-อาทิตย์) แก้ไขแค่ไฟล์นี้พอ
+# ไม่ต้องแก้โค้ดหลักเวลาเพิ่ม/ลบวันหยุด
+HOLIDAYS_FILE = BASE_DIR / "holidays.txt"
+
+
+def load_holidays() -> set[str]:
+    """อ่านวันที่หยุดพิเศษจาก holidays.txt (รูปแบบ YYYY-MM-DD บรรทัดละ 1 วัน)"""
+    if not HOLIDAYS_FILE.exists():
+        return set()
+    dates = set()
+    for line in HOLIDAYS_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        dates.add(line)
+    return dates
+
+
+def is_holiday_today() -> bool:
+    tz = pytz.timezone("Asia/Bangkok")
+    today_str = datetime.now(tz).strftime("%Y-%m-%d")
+    return today_str in load_holidays()
 
 
 def is_market_hours() -> bool:
@@ -151,7 +174,10 @@ def check_watchlist() -> None:
     force_run = os.environ.get("FORCE_RUN", "false").strip().lower() == "true"
 
     if force_run:
-        print("[force_run] ข้ามการเช็คเวลาตลาด เช็คราคาทันที")
+        print("[force_run] ข้ามการเช็คเวลาตลาด/วันหยุด เช็คราคาทันที")
+    elif is_holiday_today():
+        print("วันนี้เป็นวันหยุดพิเศษตาม holidays.txt ข้ามการเช็ครอบนี้")
+        return
     elif ONLY_DURING_MARKET_HOURS and not is_market_hours():
         print("นอกเวลาทำการตลาด ข้ามการเช็ครอบนี้")
         return
