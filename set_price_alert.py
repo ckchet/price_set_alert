@@ -56,7 +56,7 @@ def load_watchlist() -> list[str]:
 WATCHLIST = load_watchlist()
 
 # เกณฑ์ % ที่จะแจ้งเตือน (ทั้งขึ้นและลง)
-THRESHOLD_PERCENT = 1.5
+THRESHOLD_PERCENT = 1.8
 
 # ดึงค่าจาก Environment Variable (ปลอดภัยกว่าเขียนลงโค้ดตรงๆ)
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
