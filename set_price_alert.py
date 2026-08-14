@@ -18,6 +18,7 @@ SET Stock Price Alert -> Telegram
 
 import os
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 import pytz
@@ -55,7 +56,7 @@ def load_watchlist() -> list[str]:
 WATCHLIST = load_watchlist()
 
 # เกณฑ์ % ที่จะแจ้งเตือน (ทั้งขึ้นและลง)
-THRESHOLD_PERCENT = 2.0
+THRESHOLD_PERCENT = 1.5
 
 # ดึงค่าจาก Environment Variable (ปลอดภัยกว่าเขียนลงโค้ดตรงๆ)
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -98,19 +99,82 @@ def is_market_hours() -> bool:
     return market_open <= now <= market_close
 
 
+# Telegram จำกัดความยาวข้อความที่ 4096 ตัวอักษร เผื่อขอบไว้หน่อยให้ปลอดภัย
+TELEGRAM_MAX_CHARS = 3800
+# เว้นจังหวะระหว่างส่งแต่ละข้อความ (วินาที) กันโดน Telegram rate limit ตอนส่งหลายข้อความติดกัน
+TELEGRAM_SEND_DELAY = 1.0
+
+
+def _send_single_telegram_message(text: str, retries: int = 3) -> None:
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    for attempt in range(1, retries + 1):
+        resp = requests.post(
+            url,
+            data={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML"},
+            timeout=15,
+        )
+        if resp.ok:
+            return
+        if resp.status_code == 429:
+            # โดน rate limit — Telegram จะบอกเวลาที่ต้องรอใน retry_after (วินาที)
+            try:
+                retry_after = resp.json().get("parameters", {}).get("retry_after", 5)
+            except Exception:
+                retry_after = 5
+            print(f"[warn] โดน Telegram rate limit รอ {retry_after} วินาทีแล้วลองใหม่ (ครั้งที่ {attempt}/{retries})")
+            time.sleep(retry_after + 1)
+            continue
+        print(f"[error] ส่ง Telegram ไม่สำเร็จ: {resp.status_code} {resp.text}")
+        return
+    print("[error] ส่ง Telegram ไม่สำเร็จหลังลองซ้ำครบจำนวนแล้ว (โดน rate limit ต่อเนื่อง)")
+
+
+def _split_message(text: str, max_chars: int) -> list[str]:
+    """
+    แบ่งข้อความยาวๆ เป็นชิ้นย่อยไม่เกิน max_chars ตัวอักษร
+    พยายามตัดตรงรอยต่อระหว่างหุ้นแต่ละตัว (คั่นด้วยบรรทัดว่าง) ไม่ตัดกลางหุ้นตัวเดียว
+    """
+    if len(text) <= max_chars:
+        return [text]
+
+    blocks = text.split("\n\n")
+    chunks = []
+    current = ""
+    for block in blocks:
+        candidate = f"{current}\n\n{block}" if current else block
+        if len(candidate) <= max_chars:
+            current = candidate
+        else:
+            if current:
+                chunks.append(current)
+            # เผื่อบล็อกเดียวยาวเกิน max_chars ก็ตัดดื้อๆ ไปเลย (กรณีนี้แทบไม่เกิดกับข้อความหุ้น)
+            if len(block) > max_chars:
+                for i in range(0, len(block), max_chars):
+                    chunks.append(block[i:i + max_chars])
+                current = ""
+            else:
+                current = block
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def send_telegram_message(text: str) -> None:
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("[warn] ยังไม่ได้ตั้งค่า TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID")
         print(text)
         return
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    resp = requests.post(
-        url,
-        data={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML"},
-        timeout=15,
-    )
-    if not resp.ok:
-        print(f"[error] ส่ง Telegram ไม่สำเร็จ: {resp.status_code} {resp.text}")
+
+    chunks = _split_message(text, TELEGRAM_MAX_CHARS)
+    if len(chunks) > 1:
+        print(f"[info] ข้อความยาวเกิน แบ่งส่งเป็น {len(chunks)} ชิ้น")
+
+    for i, chunk in enumerate(chunks):
+        if len(chunks) > 1:
+            chunk = f"({i + 1}/{len(chunks)})\n{chunk}"
+        _send_single_telegram_message(chunk)
+        if i < len(chunks) - 1:
+            time.sleep(TELEGRAM_SEND_DELAY)
 
 
 def fetch_price_changes(symbols: list[str]) -> dict:
