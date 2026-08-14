@@ -42,26 +42,31 @@
 
 ---
 
+## ตั้งวันหยุดพิเศษให้บอทหยุดทำงาน
+
+บอทหยุดทำงานเองอยู่แล้วทุกเสาร์-อาทิตย์ ถ้าอยากให้หยุดเพิ่มในวันอื่น (เช่นวันหยุดนักขัตฤกษ์ ตลาดปิดพิเศษ) ไม่ต้องแก้โค้ด — แก้แค่ไฟล์ **`holidays.txt`**:
+
+1. เปิดไฟล์ `holidays.txt`
+2. เพิ่มวันที่ต้องการ 1 บรรทัดต่อ 1 วัน รูปแบบ `YYYY-MM-DD` เช่น:
+   ```
+   2026-08-12
+   2026-12-05
+   ```
+3. Commit + push ขึ้น GitHub
+
+พอถึงวันนั้น บอทจะเช็คแล้วข้ามการทำงานทั้งวันโดยอัตโนมัติ (ไม่ต้องลบวันที่ออกหลังผ่านไปแล้ว เก็บสะสมไว้ในไฟล์ได้เรื่อยๆ) — ถ้าอยากทดสอบด้วยมือในวันที่ตั้งเป็นวันหยุดไว้ ใช้ตัวเลือก `force_run` ตอนกด Run workflow ได้ตามปกติ (จะข้ามทั้งเช็ควันหยุดและเวลาตลาด)
+
 ## แก้ไขหุ้นที่ติดตาม
 
-รายชื่อหุ้นแยกเป็น 3 ไฟล์ (1 บรรทัดต่อ 1 ตัว ไม่ต้องเติม `.BK` ก็ได้ ระบบเติมให้อัตโนมัติ):
+รายชื่อหุ้นทั้งหมดอยู่ในไฟล์เดียว **`watchlist_custom.txt`** (1 บรรทัดต่อ 1 ตัว ไม่ต้องเติม `.BK` ก็ได้ ระบบเติมให้อัตโนมัติ, บรรทัดขึ้นต้นด้วย `#` คือคอมเมนต์)
 
-| ไฟล์ | ใช้สำหรับ |
-|---|---|
-| `watchlist_custom.txt` | หุ้นที่คุณสนใจเป็นการส่วนตัว แก้ไข/เพิ่มได้เลย |
-| `watchlist_set100.txt` | หุ้นกลุ่ม SET100 — มีลิสต์เริ่มต้นให้บางส่วน **แต่ไม่ใช่รายชื่อฉบับสมบูรณ์/ล่าสุด** เพราะไฟล์ทางการต้องล็อกอินโหลด และรายชื่อเปลี่ยนทุก 6 เดือน |
-| `watchlist_sethd.txt` | หุ้นกลุ่ม SETHD — ยังไม่ได้ใส่รายชื่อไว้ล่วงหน้า ต้องคัดลอกมาใส่เอง |
+ตอนนี้ในไฟล์มีหุ้น 100 ตัว (รวมจาก SET100 + SETHD + หุ้นที่คุณสนใจส่วนตัว เข้าไว้ด้วยกันแล้ว ตัดตัวซ้ำเรียบร้อย) — จะเพิ่ม/ลบหุ้นตัวไหนก็แก้ไฟล์นี้ไฟล์เดียวได้เลย ไม่ต้องแยกไฟล์อีกต่อไป
 
-**วิธีเอารายชื่อ SET100 / SETHD ฉบับล่าสุดมาใส่:**
+**ถ้าต้องการอัปเดตตามรายชื่อ SET100/SETHD รอบใหม่ในอนาคต** (ตลท. ประกาศทุก 6 เดือน ม.ค./ก.ค.) หาข้อมูลได้จาก:
+- SET100: https://www.set.or.th/th/market/information/securities-list/constituents-list-set50-set100
+- SETHD: https://www.set.or.th/th/market/information/securities-list/constituents-list-sethd
 
-1. ล็อกอิน (สมัครฟรี) ที่เว็บ SET แล้วโหลด PDF รอบล่าสุด:
-   - SET100: https://www.set.or.th/th/market/information/securities-list/constituents-list-set50-set100
-   - SETHD: https://www.set.or.th/th/market/information/securities-list/constituents-list-sethd
-2. หรือดูจากตารางที่ไม่ต้องล็อกอิน เช่น settrade.com:
-   https://www.settrade.com/th/equities/market-data/overview?category=Index&index=SET100
-3. คัดลอกชื่อย่อหุ้น (symbol) มาวางในไฟล์ `.txt` ที่เกี่ยวข้อง บรรทัดละ 1 ตัว
-
-หุ้นที่ซ้ำกันระหว่าง 3 ไฟล์ (เช่นหุ้นที่อยู่ทั้ง watchlist ส่วนตัว และ SET100) จะถูกตัดออกให้อัตโนมัติ ไม่ซ้ำซ้อน
+(ต้องล็อกอินสมาชิกฟรีก่อนโหลด) แล้วนำมาผสาน/แก้ไขใน `watchlist_custom.txt` เอง หรือส่งไฟล์มาให้ช่วยแกะให้ก็ได้
 
 > อย่าลืม: ทุกครั้งที่แก้ไขไฟล์ `.txt` ต้อง commit + push ขึ้น GitHub ด้วย ไม่งั้น workflow จะยังใช้รายชื่อเดิม
 
@@ -69,15 +74,65 @@
 
 แก้ค่า `THRESHOLD_PERCENT = 2.0` ในไฟล์ `set_price_alert.py` (ตอนนี้ตั้งไว้ที่ 2% แล้ว)
 
-## รันบนเครื่องตัวเองแทน (ทางเลือก)
+## รันด้วย Cron บนเครื่อง/เซิร์ฟเวอร์ตัวเอง (ทางเลือกแทน GitHub Actions)
 
-ถ้าไม่อยากใช้ GitHub Actions:
+เหมาะถ้ามี Linux/Mac server หรือ VPS อยู่แล้ว และต้องการความแม่นยำของเวลามากกว่า GitHub Actions free tier
 
-```bash
-pip install -r requirements.txt
-export TELEGRAM_BOT_TOKEN="xxxx"
-export TELEGRAM_CHAT_ID="xxxx"
-python set_price_alert.py
+### ขั้นตอน
+
+1. ติดตั้ง dependencies:
+   ```bash
+   cd /path/to/set_alert
+   pip install -r requirements.txt --break-system-packages
+   ```
+
+2. ตั้งค่า Telegram credentials — คัดลอกไฟล์ `.env.example` เป็น `.env` แล้วใส่ค่าจริง:
+   ```bash
+   cp .env.example .env
+   nano .env   # ใส่ TELEGRAM_BOT_TOKEN และ TELEGRAM_CHAT_ID ของคุณ
+   ```
+   ไฟล์ `.env` จะถูกโหลดอัตโนมัติตอนสคริปต์รัน (ไม่ต้อง export env var เอง) — และห้าม commit ไฟล์นี้ขึ้น git (มี `.gitignore` กันไว้ให้แล้ว)
+
+3. แก้ path ในไฟล์ `run_check.sh` บรรทัด `PROJECT_DIR=` ให้ตรงกับตำแหน่งจริงที่วางโปรเจกต์นี้ไว้ เช่น:
+   ```bash
+   PROJECT_DIR="/home/user/set_alert"
+   ```
+   แล้วให้สิทธิ์รันไฟล์ (ทำครั้งเดียว):
+   ```bash
+   chmod +x run_check.sh
+   ```
+
+4. ทดสอบรันด้วยมือก่อนตั้ง cron:
+   ```bash
+   ./run_check.sh
+   cat set_price_alert.log   # ดูผลลัพธ์
+   ```
+
+5. ตั้ง cron ให้รันทุก 30 นาที — พิมพ์ `crontab -e` แล้วเพิ่มบรรทัดนี้ (แก้ path ให้ตรงกับของคุณ):
+   ```
+   */30 * * * * /path/to/set_alert/run_check.sh
+   ```
+   หรือถ้าอยากให้รันเฉพาะช่วงเวลาตลาดเปิด (จันทร์-ศุกร์ 10:00-16:30) เพื่อประหยัดทรัพยากร:
+   ```
+   */30 10-16 * * 1-5 /path/to/set_alert/run_check.sh
+   ```
+   (สคริปต์เองก็มีการเช็คเวลาตลาดซ้ำอยู่แล้วผ่าน `ONLY_DURING_MARKET_HOURS` ดังนั้นตั้ง cron แบบไหนก็ได้ ผลลัพธ์จะไม่ต่างกันมาก)
+
+6. เช็คว่า cron รันจริงไหม — ดู log ไฟล์ `set_price_alert.log` ที่จะถูกเขียนทับ/ต่อท้ายทุกครั้งที่รัน
+
+### หมายเหตุสำหรับ Windows
+
+ถ้าใช้ Windows แทน cron ให้ใช้ **Task Scheduler** สร้าง task ใหม่ ตั้ง Trigger เป็น "Repeat task every 30 minutes" และ Action เป็นการรันคำสั่ง:
+```
+python C:\path\to\set_alert\set_price_alert.py
 ```
 
-แล้วตั้ง cron (Linux/Mac) หรือ Task Scheduler (Windows) ให้รันคำสั่งข้างต้นทุก 30 นาที
+---
+
+## รันบนเครื่องตัวเองแบบไม่ใช้ cron (ทดสอบเฉยๆ)
+
+```bash
+pip install -r requirements.txt --break-system-packages
+python set_price_alert.py
+```
+(ต้องมีไฟล์ `.env` ตั้งไว้แล้วตามขั้นตอนด้านบน หรือจะ `export TELEGRAM_BOT_TOKEN=...` เองก็ได้)

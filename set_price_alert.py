@@ -4,13 +4,11 @@ SET Stock Price Alert -> Telegram
 เช็คราคาหุ้นในลิสต์ที่กำหนด ถ้าราคาเปลี่ยนแปลง (ขึ้นหรือลง) เกิน THRESHOLD_PERCENT
 เมื่อเทียบกับราคาปิดวันก่อนหน้า จะส่งข้อความแจ้งเตือนเข้า Telegram
 
-รายชื่อหุ้นที่ติดตามมาจาก 3 ไฟล์ (แก้ไข/เพิ่มได้อิสระ ต่อท้ายด้วย .BK เสมอ):
-- watchlist_custom.txt  -> หุ้นที่คุณสนใจเป็นการส่วนตัว
-- watchlist_set100.txt  -> หุ้นกลุ่ม SET100 (ต้องคัดลอกมาใส่เอง ดู README.md)
-- watchlist_sethd.txt   -> หุ้นกลุ่ม SETHD (ต้องคัดลอกมาใส่เอง ดู README.md)
+รายชื่อหุ้นที่ติดตามอยู่ในไฟล์เดียว: watchlist_custom.txt
+(1 บรรทัดต่อ 1 ตัว ไม่ต้องเติม .BK ระบบเติมให้เอง)
 
 วิธีตั้งค่า:
-1. ใส่รายชื่อหุ้นในไฟล์ .txt ทั้ง 3 ไฟล์ (บรรทัดละ 1 ตัว)
+1. แก้ไขรายชื่อหุ้นในไฟล์ watchlist_custom.txt (เพิ่ม/ลบได้อิสระ)
 2. ตั้งค่า TELEGRAM_BOT_TOKEN และ TELEGRAM_CHAT_ID
    - แนะนำให้ตั้งเป็น Environment Variable แทนการเขียนลงโค้ดตรงๆ (ดู README.md)
 3. รันสคริปต์นี้ทุก 30 นาที ผ่าน cron / Task Scheduler / GitHub Actions
@@ -34,28 +32,23 @@ BASE_DIR = Path(__file__).resolve().parent
 # โหลดค่าจากไฟล์ .env ถ้ามี (สะดวกเวลารันผ่าน cron ซึ่งไม่โหลด shell profile ให้)
 load_dotenv(BASE_DIR / ".env")
 
-WATCHLIST_FILES = [
-    BASE_DIR / "watchlist_custom.txt",
-    BASE_DIR / "watchlist_set100.txt",
-    BASE_DIR / "watchlist_sethd.txt",
-]
+WATCHLIST_FILE = BASE_DIR / "watchlist_custom.txt"
 
 
 def load_watchlist() -> list[str]:
-    """อ่านรายชื่อหุ้นจากไฟล์ .txt ทั้งหมด รวมกันและตัดตัวซ้ำออก"""
+    """อ่านรายชื่อหุ้นจาก watchlist_custom.txt ตัดตัวซ้ำออก"""
     symbols: list[str] = []
-    for file_path in WATCHLIST_FILES:
-        if not file_path.exists():
-            print(f"[warn] ไม่พบไฟล์ {file_path.name} ข้ามไป")
+    if not WATCHLIST_FILE.exists():
+        print(f"[warn] ไม่พบไฟล์ {WATCHLIST_FILE.name}")
+        return symbols
+    for line in WATCHLIST_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip().upper()
+        if not line or line.startswith("#"):
             continue
-        for line in file_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip().upper()
-            if not line or line.startswith("#"):
-                continue
-            if not line.endswith(".BK"):
-                line += ".BK"
-            symbols.append(line)
-    # ตัดตัวซ้ำ (เช่นหุ้นที่อยู่ทั้ง watchlist ส่วนตัว และ SET100) โดยคงลำดับเดิม
+        if not line.endswith(".BK"):
+            line += ".BK"
+        symbols.append(line)
+    # ตัดตัวซ้ำ โดยคงลำดับเดิม
     return list(dict.fromkeys(symbols))
 
 
